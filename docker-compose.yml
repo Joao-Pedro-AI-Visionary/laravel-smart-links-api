@@ -1,0 +1,27 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: local
+      DB_CONNECTION: sqlite
+      QUEUE_CONNECTION: database
+    volumes:
+      - ./database:/var/www/html/database
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=30"]
+    environment:
+      APP_ENV: local
+      DB_CONNECTION: sqlite
+      QUEUE_CONNECTION: database
+    volumes:
+      - ./database:/var/www/html/database
+    depends_on:
+      - api
