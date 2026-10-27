@@ -73,6 +73,11 @@ class ShortLinkController extends Controller
             ->pluck('total', 'referer_host')
             ->all();
 
+        $recentClicks = $shortLink->clicks()
+            ->latest('clicked_at')
+            ->limit(10)
+            ->get(['device_type', 'referer_host', 'clicked_at']);
+
         return response()->json([
             'data' => [
                 'slug' => $shortLink->slug,
@@ -86,6 +91,7 @@ class ShortLinkController extends Controller
                     'bot' => (int) ($byDeviceRaw['bot'] ?? 0),
                 ],
                 'by_referer' => $byRefererRaw,
+                'recent_clicks' => $recentClicks,
                 'is_expired' => $shortLink->isExpired(),
             ],
         ]);

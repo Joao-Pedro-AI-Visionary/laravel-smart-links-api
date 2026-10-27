@@ -18,6 +18,13 @@ class SmartLinkApiTest extends TestCase
             'target_url' => 'not-a-valid-url',
         ])->assertStatus(422);
 
+        // SSRF protection: private/metadata IP in webhook_url rejected with 422
+        $this->postJson('/api/v1/links', [
+            'title' => 'SSRF Attempt',
+            'target_url' => 'https://example.com',
+            'webhook_url' => 'http://169.254.169.254/latest/meta-data/',
+        ])->assertStatus(422);
+
         // Valid custom slug created with 201 (CA-01)
         $response = $this->postJson('/api/v1/links', [
             'title' => 'Portfólio Vue & Laravel',
@@ -47,6 +54,11 @@ class SmartLinkApiTest extends TestCase
 
         $autoResponse->assertStatus(201);
         $this->assertNotEmpty($autoResponse->json('data.slug'));
+
+        // Paginated list endpoint returns created links
+        $this->getJson('/api/v1/links')
+            ->assertStatus(200)
+            ->assertJsonCount(2, 'data');
     }
 
     public function test_redirects_with_utm_parameters_records_telemetry_and_fires_webhook(): void

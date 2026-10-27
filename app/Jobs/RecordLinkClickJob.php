@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class RecordLinkClickJob implements ShouldQueue
 {
@@ -56,8 +57,11 @@ class RecordLinkClickJob implements ShouldQueue
                     'referer_host' => $refererHost,
                     'clicked_at' => $this->clickedAtIso,
                 ]);
-            } catch (\Throwable) {
-                // Non-blocking webhook notification
+            } catch (\Throwable $e) {
+                Log::warning('Webhook delivery failed', [
+                    'slug' => $shortLink->slug,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
     }
