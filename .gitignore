@@ -29,3 +29,6 @@ Thumbs.db
 /.gbrain
 /.harness
 /.worktrees
+/test-results
+/playwright-report
+/pnpm-lock.yaml

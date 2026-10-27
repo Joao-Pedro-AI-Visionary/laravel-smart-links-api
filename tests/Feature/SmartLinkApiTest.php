@@ -116,6 +116,15 @@ class SmartLinkApiTest extends TestCase
 
         $this->get('/r/vaga-antiga')->assertStatus(410);
 
+        // Update link via PUT /api/v1/links/{slug}
+        $this->putJson('/api/v1/links/vaga-antiga', [
+            'title' => 'Link Renovado Pleno',
+            'target_url' => 'https://example.com/renewed',
+            'utm_source' => 'github_profile',
+        ])->assertStatus(200)
+            ->assertJsonPath('data.title', 'Link Renovado Pleno')
+            ->assertJsonPath('data.target_url', 'https://example.com/renewed');
+
         $this->deleteJson('/api/v1/links/vaga-antiga')->assertStatus(204);
         $this->getJson('/api/v1/links/vaga-antiga/stats')->assertStatus(404);
     }

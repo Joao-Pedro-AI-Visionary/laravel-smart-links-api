@@ -26,7 +26,7 @@ class RedirectController extends Controller
 
         $visitorHash = hash('sha256', "{$ip}|{$userAgent}|{$today}");
 
-        RecordLinkClickJob::dispatch(
+        RecordLinkClickJob::dispatchSync(
             shortLinkId: $shortLink->id,
             visitorHash: $visitorHash,
             userAgent: $userAgent,

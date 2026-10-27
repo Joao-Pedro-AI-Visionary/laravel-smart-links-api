@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreShortLinkRequest;
 use App\Models\ShortLink;
+use Closure;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ShortLinkController extends Controller
 {
@@ -93,6 +96,72 @@ class ShortLinkController extends Controller
                 'by_referer' => $byRefererRaw,
                 'recent_clicks' => $recentClicks,
                 'is_expired' => $shortLink->isExpired(),
+            ],
+        ]);
+    }
+
+    public function update(Request $request, string $slug): JsonResponse
+    {
+        $shortLink = ShortLink::query()->where('slug', $slug)->firstOrFail();
+
+        $validated = $request->validate([
+            'title' => ['sometimes', 'required', 'string', 'max:160'],
+            'slug' => [
+                'sometimes',
+                'required',
+                'string',
+                'alpha_dash',
+                'min:3',
+                'max:64',
+                Rule::unique('short_links', 'slug')->ignore($shortLink->id),
+            ],
+            'target_url' => ['sometimes', 'required', 'url:http,https', 'max:2048'],
+            'utm_source' => ['nullable', 'string', 'max:80'],
+            'utm_medium' => ['nullable', 'string', 'max:80'],
+            'webhook_url' => [
+                'nullable',
+                'url:http,https',
+                'max:2048',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if (! is_string($value)) {
+                        return;
+                    }
+                    $host = strtolower((string) parse_url($value, PHP_URL_HOST));
+                    if ($host === '' || in_array($host, ['localhost', '0.0.0.0', '::1'], true)) {
+                        $fail('O webhook_url não pode apontar para hosts locais ou internos.');
+
+                        return;
+                    }
+                    if (filter_var($host, FILTER_VALIDATE_IP)) {
+                        $isPublicIp = filter_var(
+                            $host,
+                            FILTER_VALIDATE_IP,
+                            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+                        );
+                        if ($isPublicIp === false) {
+                            $fail('O webhook_url não pode apontar para endereços IP privados ou reservados (proteção SSRF).');
+                        }
+                    }
+                },
+            ],
+            'expires_at' => ['nullable', 'date'],
+        ]);
+
+        $shortLink->update($validated);
+
+        return response()->json([
+            'data' => [
+                'id' => $shortLink->id,
+                'slug' => $shortLink->slug,
+                'title' => $shortLink->title,
+                'short_url' => url("/r/{$shortLink->slug}"),
+                'target_url' => $shortLink->target_url,
+                'utm_source' => $shortLink->utm_source,
+                'utm_medium' => $shortLink->utm_medium,
+                'webhook_url' => $shortLink->webhook_url,
+                'expires_at' => $shortLink->expires_at?->toIso8601String(),
+                'clicks_count' => (int) $shortLink->clicks_count,
+                'updated_at' => $shortLink->updated_at?->toIso8601String(),
             ],
         ]);
     }
